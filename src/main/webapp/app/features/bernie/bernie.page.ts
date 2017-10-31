@@ -19,7 +19,10 @@ import { slices, handleNavigation } from '../../core/store/util';
     selector: 'jhi-bernie',
     templateUrl: './bernie.page.html',
     styleUrls: ['./bernie.page.scss'],
-    changeDetection: ChangeDetectionStrategy.OnPush,
+    // This is inappropriate here because this component has internal state
+    // For every component you have to choose between either using 1) Observables and the async pipe or using 2) internal state
+    // If you use internal state, then you should not use ChangeDetectionStrategy.OnPush which is an optimization
+    // changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BerniePage implements OnInit, OnDestroy {
     pageSub: Subscription;
@@ -51,8 +54,6 @@ export class BerniePage implements OnInit, OnDestroy {
             this.claimEntities = claimEntities;
         });
         this.deepClaimsSub = this.store.select(fromRoot.getDeepClaims).subscribe((deepClaims) => {
-            this.counter++;
-            console.warn(`Counter: ${this.counter}`);
             this.deepClaims = deepClaims;
         })
         this.claimRebuttalsSub = this.store.select(fromRoot.getClaimRebuttals).subscribe((claimRebuttals) => {
@@ -63,7 +64,7 @@ export class BerniePage implements OnInit, OnDestroy {
         });
 
         this.searchTerms$
-            .debounceTime(300)        // wait 300ms after each keystroke before considering the term
+            .debounceTime(400)        // wait 400ms after each keystroke before considering the term
             .distinctUntilChanged()   // ignore if next search term is same as previous
             .subscribe((term) => {
                 const url = '/features/bernie' + (term ? `?q=${term}` : '');
