@@ -8,8 +8,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import * as fromRoot from '../../core/store';
 import { BerniePageLayout } from './bernie.layout';
 import { Claim, ClaimFields, initialClaim } from '../../core/store/claim/claim.model';
-import { Rebuttal, RebuttalFields, initialRebuttal } from '../../core/store/rebuttal/rebuttal.model';
-import { ClaimRebuttal, initialClaimRebuttal } from '../../core/store/claim-rebuttal/claim-rebuttal.model';
+import { Rebuttal, RebuttalFields } from '../../core/store/rebuttal/rebuttal.model';
+import { ClaimRebuttal } from '../../core/store/claim-rebuttal/claim-rebuttal.model';
 import { Entities } from '../../core/store/entity/entity.model';
 import * as EntityActions from '../../core/store/entity/entity.actions';
 import * as SliceActions from '../../core/store/slice/slice.actions';
@@ -27,12 +27,13 @@ export class BerniePage implements OnInit, OnDestroy {
     claimEntitiesSub: Subscription;
     claimEntities: Entities<Claim>;
     deepClaimsSub: Subscription;
-    deepClaims: Claim[] = [];
+    deepClaims: any;
     claimRebuttalsSub: Subscription;
     claimRebuttals: Readonly<ClaimRebuttal[]>;
     searchTermsSub: Subscription;
     searchTerms$ = new Subject<string>();
     searchTerms: string;
+    counter: number = 0;
     options: SortablejsOptions = {
         disabled: true
     };
@@ -47,13 +48,15 @@ export class BerniePage implements OnInit, OnDestroy {
             this.page = page;
         });
         this.claimEntitiesSub = this.store.select(fromRoot.getClaimsState).subscribe((claimEntities) => {
-            this.claimEntities = claimEntities
+            this.claimEntities = claimEntities;
         });
         this.deepClaimsSub = this.store.select(fromRoot.getDeepClaims).subscribe((deepClaims) => {
+            this.counter++;
+            console.warn(`Counter: ${this.counter}`);
             this.deepClaims = deepClaims;
         })
         this.claimRebuttalsSub = this.store.select(fromRoot.getClaimRebuttals).subscribe((claimRebuttals) => {
-            this.claimRebuttals = claimRebuttals
+            this.claimRebuttals = claimRebuttals;
         });
         this.searchTermsSub = this.store.select(fromRoot.getBernieSearchTerm).subscribe((terms) => {
             this.searchTerms = terms;
