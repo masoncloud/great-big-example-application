@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/
 import { Store } from '@ngrx/store';
 import { SortablejsOptions } from 'angular-sortablejs';
 import { Subscription } from 'rxjs/Subscription';
+import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 import { Router, ActivatedRoute } from '@angular/router';
 
@@ -30,6 +31,7 @@ export class BerniePage implements OnInit, OnDestroy {
     claimEntitiesSub: Subscription;
     claimEntities: Entities<Claim>;
     deepClaimsSub: Subscription;
+    deepClaims$: Observable<Claim[]>;
     deepClaims: any;
     claimRebuttalsSub: Subscription;
     claimRebuttals: Readonly<ClaimRebuttal[]>;
@@ -51,8 +53,13 @@ export class BerniePage implements OnInit, OnDestroy {
             this.page = page;
         });
         this.claimEntitiesSub = this.store.select(fromRoot.getClaimsState).subscribe((claimEntities) => {
+            const selectedEntityId = claimEntities.selectedEntityId;
             this.claimEntities = claimEntities;
+            if (selectedEntityId !== null && claimEntities.entities[selectedEntityId] && !claimEntities.entities[selectedEntityId].expanded) {
+                this.store.dispatch(new EntityActions.Patch(slices.CLAIM, { id: selectedEntityId, expanded: true }));
+            }
         });
+        this.deepClaims$ = this.store.select(fromRoot.getDeepClaims);
         this.deepClaimsSub = this.store.select(fromRoot.getDeepClaims).subscribe((deepClaims) => {
             this.deepClaims = deepClaims;
         })
@@ -67,9 +74,11 @@ export class BerniePage implements OnInit, OnDestroy {
             .debounceTime(400)        // wait 400ms after each keystroke before considering the term
             .distinctUntilChanged()   // ignore if next search term is same as previous
             .subscribe((term) => {
-                const url = '/features/bernie' + (term ? `?q=${term}` : '');
-                this.router.navigateByUrl(url);
+                this.navigate(term, this.claimEntities.selectedEntityId);
             });
+        this.store.dispatch(new EntityActions.Unload(slices.CLAIM));
+        this.store.dispatch(new EntityActions.Unload(slices.CLAIM_REBUTTAL));
+        this.store.dispatch(new EntityActions.Unload(slices.REBUTTAL));
         this.store.dispatch(new EntityActions.Load(slices.CLAIM));
         this.store.dispatch(new EntityActions.Load(slices.CLAIM_REBUTTAL));
         this.store.dispatch(new EntityActions.Load(slices.REBUTTAL));
@@ -79,7 +88,12 @@ export class BerniePage implements OnInit, OnDestroy {
     search(term: string): void {
         this.searchTerms$.next(term);
     }
-
+    navigate(term: string, claimId: string) {
+        const url = '/features/bernie'
+            + (claimId !== null ? `/${claimId}` : '')
+            + (term ? `?q=${term}` : '');
+        this.router.navigateByUrl(url);
+    }
     toggleEditable() {
         this.store.dispatch(new SliceActions.Update(slices.LAYOUT, ['berniePage', 'editable'], !this.page.editable));
         this.options = { disabled: !this.options.disabled };
@@ -114,6 +128,9 @@ export class BerniePage implements OnInit, OnDestroy {
     }
 
     toggleRebuttals(claim: { id: string, expanded: boolean }) {
+        if (this.claimEntities.selectedEntityId === claim.id && claim.expanded) {
+            this.store.dispatch(new EntityActions.Select(slices.CLAIM, { id: null }));
+        }
         this.store.dispatch(new EntityActions.Patch<ClaimFields>(slices.CLAIM, { id: claim.id, expanded: !claim.expanded }));
     }
 
