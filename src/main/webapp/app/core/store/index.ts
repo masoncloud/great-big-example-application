@@ -499,18 +499,22 @@ export const getDeepClaimRebuttals = createSelector(getClaimRebuttals, getRebutt
     })
 });
 
-export const getDeepClaims = createSelector(getClaims, getDeepClaimRebuttals, getBernieSearchTerm, (claims, deepClaimRebuttals, bernieSearchTerm) => {
-    return claims.map((claim) => {
-        return Object.assign({}, claim, {
-            rebuttals: deepClaimRebuttals
-                .filter((dcr) => dcr.claimId === claim.id)
-                .sort((a, b) => a.sortOrder < b.sortOrder ? -1 : 1)
-                .map((dcr) => dcr.rebuttal)
-        })
+export const getDeepClaims = createSelector(getClaimsState, getDeepClaimRebuttals, getBernieSearchTerm, (state, deepClaimRebuttals, bernieSearchTerm) => {
+    return {
+        selectedClaimId: state.selectedEntityId,
+        shallowEntities: state.entities,
+        deepEntities: state.ids.map((id) => {
+            return Object.assign({}, state.entities[id], {
+                rebuttals: deepClaimRebuttals
+                    .filter((dcr) => dcr.claimId === id)
+                    .sort((a, b) => a.sortOrder < b.sortOrder ? -1 : 1)
+                    .map((dcr) => dcr.rebuttal)
+            })
+        }
+        )
+            .filter((dc) => !bernieSearchTerm || (dc.name && dc.name.toLowerCase().indexOf(bernieSearchTerm.toLowerCase()) > -1))
+            .sort((a, b) => a.sortOrder < b.sortOrder ? -1 : 1)
     }
-    )
-        .filter((dc) => !bernieSearchTerm || (dc.name && dc.name.toLowerCase().indexOf(bernieSearchTerm.toLowerCase()) > -1))
-        .sort((a, b) => a.sortOrder < b.sortOrder ? -1 : 1)
 });
 
 /**

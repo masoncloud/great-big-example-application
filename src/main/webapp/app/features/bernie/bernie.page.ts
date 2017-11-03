@@ -28,11 +28,10 @@ import { slices, handleNavigation } from '../../core/store/util';
 export class BerniePage implements OnInit, OnDestroy {
     pageSub: Subscription;
     page: BerniePageLayout;
-    claimEntitiesSub: Subscription;
-    claimEntities: Entities<Claim>;
-    deepClaimsSub: Subscription;
-    deepClaims$: Observable<Claim[]>;
-    deepClaims: any;
+    claimsSub: Subscription;
+    claims$: Observable<any>;
+    claims: Claim[];
+    shallowClaims: { [index: string]: Claim };
     claimRebuttalsSub: Subscription;
     claimRebuttals: Readonly<ClaimRebuttal[]>;
     searchTermsSub: Subscription;
@@ -42,6 +41,7 @@ export class BerniePage implements OnInit, OnDestroy {
     options: SortablejsOptions = {
         disabled: true
     };
+    selectedClaimId: string;
 
     constructor(private store: Store<fromRoot.RootState>,
         private router: Router,
@@ -52,16 +52,14 @@ export class BerniePage implements OnInit, OnDestroy {
         this.pageSub = this.store.select(fromRoot.getBerniePageState).subscribe((page) => {
             this.page = page;
         });
-        this.claimEntitiesSub = this.store.select(fromRoot.getClaimsState).subscribe((claimEntities) => {
-            const selectedEntityId = claimEntities.selectedEntityId;
-            this.claimEntities = claimEntities;
-            if (selectedEntityId !== null && claimEntities.entities[selectedEntityId] && !claimEntities.entities[selectedEntityId].expanded) {
-                this.store.dispatch(new EntityActions.Patch(slices.CLAIM, { id: selectedEntityId, expanded: true }));
+        this.claims$ = this.store.select(fromRoot.getDeepClaims);
+        this.claimsSub = this.store.select(fromRoot.getDeepClaims).subscribe((claims) => {
+            this.selectedClaimId = claims.selectedClaimId;
+            this.claims = claims.deepEntities;
+            this.shallowClaims = claims.shallowEntities;  // we need this to do claims reordering
+            if (this.selectedClaimId !== null && this.shallowClaims[this.selectedClaimId] && !this.shallowClaims[this.selectedClaimId].expanded) {
+                this.store.dispatch(new EntityActions.Patch(slices.CLAIM, { id: this.selectedClaimId, expanded: true }));
             }
-        });
-        this.deepClaims$ = this.store.select(fromRoot.getDeepClaims);
-        this.deepClaimsSub = this.store.select(fromRoot.getDeepClaims).subscribe((deepClaims) => {
-            this.deepClaims = deepClaims;
         })
         this.claimRebuttalsSub = this.store.select(fromRoot.getClaimRebuttals).subscribe((claimRebuttals) => {
             this.claimRebuttals = claimRebuttals;
@@ -74,7 +72,7 @@ export class BerniePage implements OnInit, OnDestroy {
             .debounceTime(400)        // wait 400ms after each keystroke before considering the term
             .distinctUntilChanged()   // ignore if next search term is same as previous
             .subscribe((term) => {
-                this.navigate(term, this.claimEntities.selectedEntityId);
+                this.navigate(term, this.selectedClaimId);
             });
         this.store.dispatch(new EntityActions.Unload(slices.CLAIM));
         this.store.dispatch(new EntityActions.Unload(slices.CLAIM_REBUTTAL));
@@ -128,7 +126,7 @@ export class BerniePage implements OnInit, OnDestroy {
     }
 
     toggleRebuttals(claim: { id: string, expanded: boolean }) {
-        if (this.claimEntities.selectedEntityId === claim.id && claim.expanded) {
+        if (this.selectedClaimId === claim.id && claim.expanded) {
             this.store.dispatch(new EntityActions.Select(slices.CLAIM, { id: null }));
         }
         this.store.dispatch(new EntityActions.Patch<ClaimFields>(slices.CLAIM, { id: claim.id, expanded: !claim.expanded }));
@@ -171,27 +169,24 @@ export class BerniePage implements OnInit, OnDestroy {
             return;
         }
 
-        setTimeout(() => {   // need this or else sortablejs event handling gets screwed up
+        setTimeout(() => {   // need this setTimeout or else sortablejs event handling gets screwed up
             // get the claim ids in the updated order from the DOM LIs   IS THERE A BETTER WAY TO GET THESE?
             const ids = Array.prototype.slice.call(event.srcElement.children).map((li) => li.children[0].children[0].children[0].id);
 
             // get an updated hash of entities by updating sortOrder of the old ones
-            const entities = Object.assign({}, this.claimEntities.entities);
+            const entities = Object.assign({}, this.shallowClaims);
             ids.map((id, index) => {
                 entities[id].sortOrder = index;
             })
 
-            // combine entities and ids and other properties of claimEntities like selectedEntity into a new object and dispatch an update
-            const newEntities = Object.assign({}, this.claimEntities, { entities, ids });  // this Object.assign isn't necessary. Merge in slice.functions too
-            this.store.dispatch(new SliceActions.Update(slices.CLAIM, [], newEntities));
+            this.store.dispatch(new SliceActions.Patch(slices.CLAIM, [], { entities }));
         })
     }
 
     ngOnDestroy() {
         this.pageSub && this.pageSub.unsubscribe();
-        this.deepClaimsSub && this.deepClaimsSub.unsubscribe();
+        this.claimsSub && this.claimsSub.unsubscribe();
         this.claimRebuttalsSub && this.claimRebuttalsSub.unsubscribe();
-        this.claimEntitiesSub && this.claimEntitiesSub.unsubscribe();
         this.searchTermsSub && this.searchTermsSub.unsubscribe();
     }
 

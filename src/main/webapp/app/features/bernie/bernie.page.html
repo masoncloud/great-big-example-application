@@ -27,16 +27,15 @@
     <br>
     <br>
     <div class="content-container box" [scrollTop]="page.scrollY">
-        <div>Claim Count: {{deepClaims.length }}</div>
-        <div>{{deepClaims | json | shorten: 1000: '...' }}</div>
-        <ul id="claim-list" [sortablejs]="deepClaims" [sortablejsOptions]="options" (update)="reorderClaims($event)">
-            <li *ngFor="let claim of deepClaims$ | async">
+        <div>Claim Count: {{claims.length }}</div>
+        <ul id="claim-list" [sortablejs]="claims" [sortablejsOptions]="options" (update)="reorderClaims($event)">
+            <li *ngFor="let claim of claims">
                 <jhi-bernie-claim [page]="page" [claim]="claim" (addClaim)="addClaim()" (toggleEditable)="toggleEditable()" (addRebuttal)="addRebuttal($event)"
                     (toggleRebuttals)="toggleRebuttals($event)" (reorderRebuttals)="reorderRebuttals(claim, $event)" (cancelRebuttal)="cancelRebuttal($event)"
                     (saveRebuttal)="saveRebuttal($event)" (makeRebuttalEditable)="makeRebuttalEditable($event)" (navigate)="navigate(null, $event)"></jhi-bernie-claim>
             </li>
         </ul>
-        <div>Claim Count: {{deepClaims.length }}</div>
+        <div>Claim Count: {{claims.length }}</div>
     </div>
 
     <br>
