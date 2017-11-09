@@ -1,4 +1,4 @@
-<div>
+<div *ngIf="claim.id">
     <a id="{{claim.id}}"></a>
     <h3>
         <a (click)="navigate.emit(claim.id)">🔗</a>
@@ -13,7 +13,7 @@
         </div>
         <br>
         <ul class="container" [sortablejs]="claim.rebuttals" [sortablejsOptions]="options" (update)="reorderRebuttals.emit($event)">
-            <li *ngFor="let rebuttal of claim.rebuttals" [ngClass]="{touched: rebuttal.dirty}" id="{{rebuttal.id}}">
+            <li *ngFor="let rebuttal of claim.rebuttals" [ngClass]="{touched: rebuttal?.dirty}" id="{{rebuttal?.id}}">
                 <jhi-bernie-rebuttal [page]="page" [claim]="claim" [rebuttal]="rebuttal" (cancel)="cancelRebuttal.emit($event)" (makeEditable)="makeRebuttalEditable.emit($event)"
                     (save)="saveRebuttal.emit($event)"></jhi-bernie-rebuttal>
             </li>

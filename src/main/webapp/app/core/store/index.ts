@@ -499,12 +499,35 @@ export const getDeepClaimRebuttals = createSelector(getClaimRebuttals, getRebutt
     })
 });
 
-export const getDeepClaims = createSelector(getClaimsState, getDeepClaimRebuttals, getBernieSearchTerm, (state, deepClaimRebuttals, bernieSearchTerm) => {
+interface DeepClaims {
+    selectedClaimId: string,
+    deepClaims:
+    {
+        id: string,
+        name: string,
+        expanded: boolean,
+        imageLink?: string,
+        sortOrder: number,
+        rebuttals:
+        {
+            id: string
+            shortName: string,
+            longName: string,
+            editing: boolean,
+            link?: string,
+            dirty: boolean
+        }[],
+        rebuttalsReordered: boolean
+    }[],
+    shallowClaims: { [index: string]: Claim }
+}
+
+export const getDeepClaims = createSelector(getClaimsState, getDeepClaimRebuttals, getBernieSearchTerm, (state, deepClaimRebuttals, bernieSearchTerm): DeepClaims => {
     return {
         selectedClaimId: state.selectedEntityId,
-        shallowEntities: state.entities,
-        deepEntities: state.ids.map((id) => {
-            return Object.assign({}, state.entities[id], {
+        shallowClaims: state.entities,
+        deepClaims: state.ids.map((id) => {
+            return Object.assign({}, <Claim>state.entities[id], {
                 rebuttals: deepClaimRebuttals
                     .filter((dcr) => dcr.claimId === id)
                     .sort((a, b) => a.sortOrder < b.sortOrder ? -1 : 1)

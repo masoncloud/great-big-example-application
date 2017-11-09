@@ -1,8 +1,7 @@
-import { Component, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { SortablejsOptions } from 'angular-sortablejs';
 import { Subscription } from 'rxjs/Subscription';
-import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 import { Router, ActivatedRoute } from '@angular/router';
 
@@ -16,6 +15,7 @@ import * as EntityActions from '../../core/store/entity/entity.actions';
 import * as SliceActions from '../../core/store/slice/slice.actions';
 import { slices, handleNavigation } from '../../core/store/util';
 
+
 @Component({
     selector: 'jhi-bernie',
     templateUrl: './bernie.page.html',
@@ -25,11 +25,10 @@ import { slices, handleNavigation } from '../../core/store/util';
     // If you use internal state, then you should not use ChangeDetectionStrategy.OnPush which is an optimization
     // changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BerniePage implements OnInit, OnDestroy {
+export class BerniePage implements OnInit, OnDestroy, AfterViewInit {
     pageSub: Subscription;
     page: BerniePageLayout;
     claimsSub: Subscription;
-    claims$: Observable<any>;
     claims: Claim[];
     shallowClaims: { [index: string]: Claim };
     claimRebuttalsSub: Subscription;
@@ -45,18 +44,21 @@ export class BerniePage implements OnInit, OnDestroy {
 
     constructor(private store: Store<fromRoot.RootState>,
         private router: Router,
-        private route: ActivatedRoute) {
+        private route: ActivatedRoute,
+        private cdr: ChangeDetectorRef) {
     }
 
+    count() {
+        return this.counter++;
+    }
     ngOnInit() {
         this.pageSub = this.store.select(fromRoot.getBerniePageState).subscribe((page) => {
             this.page = page;
         });
-        this.claims$ = this.store.select(fromRoot.getDeepClaims);
         this.claimsSub = this.store.select(fromRoot.getDeepClaims).subscribe((claims) => {
             this.selectedClaimId = claims.selectedClaimId;
-            this.claims = claims.deepEntities;
-            this.shallowClaims = claims.shallowEntities;  // we need this to do claims reordering
+            this.claims = claims.deepClaims;
+            this.shallowClaims = claims.shallowClaims;  // we need this to do claims reordering
             if (this.selectedClaimId !== null && this.shallowClaims[this.selectedClaimId] && !this.shallowClaims[this.selectedClaimId].expanded) {
                 this.store.dispatch(new EntityActions.Patch(slices.CLAIM, { id: this.selectedClaimId, expanded: true }));
             }
@@ -74,12 +76,19 @@ export class BerniePage implements OnInit, OnDestroy {
             .subscribe((term) => {
                 this.navigate(term, this.selectedClaimId);
             });
-        this.store.dispatch(new EntityActions.Unload(slices.CLAIM));
-        this.store.dispatch(new EntityActions.Unload(slices.CLAIM_REBUTTAL));
-        this.store.dispatch(new EntityActions.Unload(slices.REBUTTAL));
-        this.store.dispatch(new EntityActions.Load(slices.CLAIM));
-        this.store.dispatch(new EntityActions.Load(slices.CLAIM_REBUTTAL));
-        this.store.dispatch(new EntityActions.Load(slices.REBUTTAL));
+        setTimeout(() => {
+            this.store.dispatch(new EntityActions.Unload(slices.CLAIM));
+            this.store.dispatch(new EntityActions.Unload(slices.CLAIM_REBUTTAL));
+            this.store.dispatch(new EntityActions.Unload(slices.REBUTTAL));
+            this.store.dispatch(new EntityActions.Load(slices.CLAIM));
+            this.store.dispatch(new EntityActions.Load(slices.CLAIM_REBUTTAL));
+            this.store.dispatch(new EntityActions.Load(slices.REBUTTAL));
+        });
+
+    }
+
+    ngAfterViewInit() {
+        this.cdr.detectChanges();
     }
 
     // Push a search term into the observable stream.
